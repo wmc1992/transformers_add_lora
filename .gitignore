@@ -78,6 +78,8 @@ site*/
 
 ~*
 
+exp_run_*.sh
+
 # start shell
 shell_commit.sh
 shell_rsync.sh
