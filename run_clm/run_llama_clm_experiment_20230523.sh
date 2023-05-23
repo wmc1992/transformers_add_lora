@@ -1,0 +1,62 @@
+# 常规训练配置
+lr=1e-4
+per_device_train_batch_size=24
+per_device_eval_batch_size=24
+gradient_accumulation_steps=1
+training_steps=3000
+max_seq_length=1024
+
+# LoRA 训练配置
+lora_rank=4
+lora_alpha=32
+target_modules="q_proj,v_proj,k_proj,o_proj,gate_proj,down_proj,up_proj"
+lora_dropout=0.05
+
+# 数据与预训练模型的路径配置
+pretrained_model=/data/pretrained_models/chinese-llama-alpaca-merge-plus-lora-7b
+tokenizer_name=/data/pretrained_models/chinese-llama-alpaca-merge-plus-lora-7b
+train_file_path=/data/wangmingchao/bert_experiment_save_folder/023_clm_transformer_测试/data.json
+output_dir=/data/wangmingchao/bert_experiment_save_folder/023_clm_transformer_测试/outputs
+
+# deepspeed配置
+deepspeed_config_file=ds_zero2_no_offload.json
+
+torchrun --nnodes 1 --nproc_per_node 1 llama_run_clm_with_lora.py \
+    --deepspeed ${deepspeed_config_file} \
+    --model_name_or_path ${pretrained_model} \
+    --tokenizer_name ${tokenizer_name} \
+    --train_file ${train_file_path} \
+    --validation_split_percentage 1 \
+    --per_device_train_batch_size ${per_device_train_batch_size} \
+    --per_device_eval_batch_size ${per_device_eval_batch_size} \
+    --gradient_accumulation_steps ${gradient_accumulation_steps} \
+    --max_steps ${training_steps} \
+    --do_train \
+    --do_eval \
+    --seed $RANDOM \
+    --fp16 \
+    --lr_scheduler_type cosine \
+    --learning_rate ${lr} \
+    --warmup_ratio 0.03 \
+    --weight_decay 0 \
+    --logging_strategy steps \
+    --logging_steps 10 \
+    --save_strategy steps \
+    --save_total_limit 3 \
+    --evaluation_strategy steps \
+    --eval_steps 250 \
+    --save_steps 500 \
+    --preprocessing_num_workers 8 \
+    --block_size ${max_seq_length} \
+    --output_dir ${output_dir} \
+    --overwrite_output_dir \
+    --ddp_timeout 30000 \
+    --logging_first_step True \
+    --use_peft True \
+    --lora_rank ${lora_rank} \
+    --lora_alpha ${lora_alpha} \
+    --target_modules ${target_modules} \
+    --lora_dropout ${lora_dropout} \
+    --torch_dtype float16 \
+    --gradient_checkpointing \
+    --ddp_find_unused_parameters False

@@ -575,6 +575,10 @@ def main():
     # support for LoRA
     # -----------------------------------------------------------------------
     if training_args.use_peft:
+        model.gradient_checkpointing_enable()
+        model.enable_input_require_grads()
+        model.config.use_cache = (False) # silence the warnings. Please re-enable for inference!
+
         if training_args.peft_path is not None:
             logger.info("Peft from pre-trained model")
             model = PeftModel.from_pretrained(model, training_args.peft_path)
