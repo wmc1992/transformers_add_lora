@@ -14,14 +14,14 @@ lora_dropout=0.05
 
 # 数据与预训练模型的路径配置
 pretrained_model=/the/pretrained/model/name/or/path
-tokenizer_name=/the/tokenizer/name/or/path
+tokenizer_name=/the/tokenizer/name/or/path # 当使用 Chinese-LLaMA-Alpaca 时其扩充了词表，需要指定该值，其他模型一般不需要指定该值
 train_file_path=/the/dataset/file/path
 output_dir=/the/output/directory/to/save/model/and/state
 
 # deepspeed配置
 deepspeed_config_file=ds_zero2_no_offload.json
 
-torchrun --nnodes 1 --nproc_per_node 2 llama_run_clm_with_lora.py \
+torchrun --nnodes 1 --nproc_per_node 2 run_clm_llama_with_lora.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${pretrained_model} \
     --tokenizer_name ${tokenizer_name} \
