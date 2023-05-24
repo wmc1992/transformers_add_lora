@@ -15,6 +15,8 @@ class DatasetUtil:
     def __init__(self, tokenizer, max_source_length, max_target_length,
                  prompt_column, response_column, history_column):
         self.tokenizer = tokenizer
+        tokenizer.pad_token = tokenizer.eos_token
+
         self.max_source_length = max_source_length
         self.max_target_length = max_target_length
         self.prompt_column = prompt_column
@@ -37,30 +39,28 @@ class DatasetUtil:
         return sources, targets
 
     def tokenization(self, examples):
-        max_seq_length = self.max_source_length + self.max_target_length
-
         sources, targets = self.build_source_and_target_content(examples)
 
-        tokenized_sources = self.tokenizer(sources, return_attention_mask=False)
-        tokenized_targets = self.tokenizer(targets, return_attention_mask=False, add_special_tokens=False)
+        tokenized_sources = self.tokenizer(
+            sources,
+            padding="max_length",
+            truncation=True,
+            max_length=self.max_source_length - 1,
+        )
+        tokenized_targets = self.tokenizer(
+            targets,
+            padding="max_length",
+            truncation=True,
+            max_length=self.max_target_length - 1,
+        )
 
         all_input_ids = []
         all_labels = []
-        for s,t in zip(tokenized_sources["input_ids"],tokenized_targets["input_ids"]):
-            s = s[:self.max_source_length]
-            t = t[:self.max_target_length]
-
-            input_ids = s + t
-            labels = [IGNORE_INDEX] * len(s) + t
+        for s,t in zip(tokenized_sources["input_ids"], tokenized_targets["input_ids"]):
+            input_ids = torch.LongTensor(s + t)
+            labels = torch.LongTensor([IGNORE_INDEX] * len(s) + t)
             assert len(input_ids) == len(labels)
-
-            pad_len = max_seq_length - len(input_ids)
-            input_ids = input_ids + [self.tokenizer.pad_token_id] * pad_len
-            labels = labels + [self.tokenizer.pad_token_id] * pad_len
-            assert len(input_ids) == len(labels)
-
-            input_ids = torch.LongTensor(input_ids)
-            labels = torch.LongTensor(labels)
+            assert len(input_ids) <= self.max_source_length + self.max_target_length
 
             all_input_ids.append(input_ids)
             all_labels.append(labels)

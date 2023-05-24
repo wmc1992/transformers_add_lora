@@ -452,7 +452,7 @@ def main():
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, add_prefix_space=True, **tokenizer_kwargs)
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
@@ -499,6 +499,7 @@ def main():
     datasetutil = DatasetUtil(tokenizer, data_args.max_source_length, data_args.max_target_length,
                               data_args.prompt_column, data_args.response_column, data_args.history_column)
 
+    logger.info("开始处理数据")
     with training_args.main_process_first(desc="dataset map tokenization"):
         if not data_args.streaming:
             tokenized_datasets = raw_datasets.map(
