@@ -16,6 +16,8 @@ ChatGLM 的专项修改的内容为：
 
 ## ChatGLM 专项修改的内容
 
+### 加载和初始化
+
 加载config、tokenizer、model 时添加参数 `trust_remote_code=True`，且加载模型时使用 `AutoModel`，不能使用 `AutoModelForCausalLM`。这部分比较简单，相应的代码修改如下所示。
 
 加载 config：
@@ -60,6 +62,16 @@ if model_args.model_name_or_path:
 +       trust_remote_code=True,
     )
 ```
+
+### 数据处理部分
+
+单条数据的格式如下所示，主要是 `input`、`target`、`history` 这三个字段，其中 `history` 字段可以没有。
+
+```
+{"input": "世界上最高的山峰是什么？", "target": "珠穆朗玛峰", "history": [["你好", "您好，请问有什么可以帮您的？"], ["你可以做什么？", "我是智能语言大模型，您可以向我提问题。"]]}
+```
+
+
 
 ## 通用的需要修改的内容
 
