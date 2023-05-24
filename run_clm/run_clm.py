@@ -53,8 +53,6 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
-from peft import LoraConfig, TaskType, get_peft_model, PeftModel, get_peft_model_state_dict
-
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.30.0.dev0")
@@ -227,23 +225,12 @@ class DataTrainingArguments:
                 assert extension in ["csv", "json", "txt"], "`validation_file` should be a csv, a json or a txt file."
 
 
-@dataclass
-class MyTrainingArguments(TrainingArguments):
-    use_peft : Optional[bool] = field(default=False)  # 是否使用peft
-    peft_path : Optional[str] = field(default=None)  # 使用peft预训练的模型
-    target_modules : Optional[str] = field(default="q_proj,v_proj") # 对哪些层使用 LoRA
-    lora_rank : Optional[int] = field(default=8)
-    lora_dropout : Optional[float] = field(default=0.05)
-    lora_alpha : Optional[float] = field(default=32.)
-    modules_to_save : Optional[str] = field(default=None)
-
-
 def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, MyTrainingArguments))
+    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
@@ -569,56 +556,6 @@ def main():
             labels = labels[:, 1:].reshape(-1)
             preds = preds[:, :-1].reshape(-1)
             return metric.compute(predictions=preds, references=labels)
-
-    # -----------------------------------------------------------------------
-    # support for LoRA
-    # -----------------------------------------------------------------------
-    if training_args.use_peft:
-        model.gradient_checkpointing_enable()
-        model.enable_input_require_grads()
-        model.config.use_cache = (False) # silence the warnings. Please re-enable for inference!
-
-        if training_args.peft_path is not None:
-            logger.info("Peft from pre-trained model")
-            model = PeftModel.from_pretrained(model, training_args.peft_path)
-        else:
-            logger.info("Init new peft model")
-
-            target_modules = training_args.target_modules.split(',')
-            modules_to_save = training_args.modules_to_save
-            if modules_to_save is not None:
-                modules_to_save = modules_to_save.split(',')
-            lora_rank = training_args.lora_rank
-            lora_dropout = training_args.lora_dropout
-            lora_alpha = training_args.lora_alpha
-
-            logger.info(f"Init LoRA parameters:\n"
-                        f"target_modules: {target_modules}\n"
-                        f"modules_to_save: {modules_to_save}\n"
-                        f"lora_rank: {lora_rank}\n"
-                        f"lora_dropout: {lora_dropout}\n"
-                        f"lora_alpha: {lora_alpha}")
-
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM, 
-                target_modules=target_modules,
-                inference_mode=False, 
-                r=lora_rank, 
-                lora_alpha=lora_alpha, 
-                lora_dropout=lora_dropout,
-                modules_to_save=modules_to_save,
-            )
-            model = get_peft_model(model, peft_config)
-
-        model.print_trainable_parameters()
-        logger.info(f"model.modules_to_save: {model.modules_to_save}")
-        old_state_dict = model.state_dict
-        model.state_dict = (
-            lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
-        ).__get__(model, type(model))
-    # -----------------------------------------------------------------------
-    # support for LoRA
-    # -----------------------------------------------------------------------
 
     # Initialize our Trainer
     trainer = Trainer(
