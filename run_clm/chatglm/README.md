@@ -1,4 +1,10 @@
-# ChatGLM 训练脚本修改说明
+# ChatGLM + LoRA 训练脚本
+
+## 如何使用
+
+
+
+## 训练脚本修改内容说明
 
 以 [transformers](https://github.com/huggingface/transformers) 库中的脚本 `examples/pytorch/language-modeling/run_clm.py` 为基准，在其基础上进行修改，用于对 ChatGLM-6B 模型做 LoRA 微调。
 
