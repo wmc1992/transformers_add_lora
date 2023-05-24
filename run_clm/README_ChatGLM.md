@@ -13,3 +13,17 @@ ChatGLM 的专项修改的内容为：
 
 * 加载config、tokenizer、model 时添加参数 `trust_remote_code=True`，且加载模型时使用 `AutoModel`，不能使用 `AutoModelForCausalLM`；
 * 数据处理部分按照官方提供的代码进行处理，否则会有特殊符号报错问题；
+
+## ChatGLM 专项修改的内容
+
+```
+if model_args.config_name:
+    config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
+elif model_args.model_name_or_path:
+-   config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
++   config = AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True, **config_kwargs)
+```
+
+## 通用的需要修改的内容
+
+
