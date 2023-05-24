@@ -65,11 +65,64 @@ if model_args.model_name_or_path:
 
 ### 数据处理部分
 
-单条数据的格式如下所示，主要是 `input`、`target`、`history` 这三个字段，其中 `history` 字段可以没有。
+原始 `run_clm.py` 脚本是直接将数据中的文本作为输入，然后向后偏移一位之后作为 labels，而目前的应用场景更多是输入和输出是不同的，所以这里修改了数据格式，并且会按照新的数据格式添加相应的参数，以及修改相应的数据处理部分的代码。
+
+#### 数据格式
+
+单条数据的格式如下所示，主要是 `prompt`、`response`、`history` 这三个字段，其中 `history` 字段可以没有。
 
 ```
-{"input": "世界上最高的山峰是什么？", "target": "珠穆朗玛峰", "history": [["你好", "您好，请问有什么可以帮您的？"], ["你可以做什么？", "我是智能语言大模型，您可以向我提问题。"]]}
+{"prompt": "世界上最高的山峰是什么？", "response": "珠穆朗玛峰", "history": [["你好", "您好，请问有什么可以帮您的？"], ["你可以做什么？", "我是智能语言大模型，您可以向我提问题。"]]}
 ```
+
+#### 添加输入参数
+
+将数据格式做了上述修改之后，添加上如下的输入参数，基本都是和上述的数据格式是一一对应的。
+
+```python
+@dataclass
+class DataTrainingArguments:
+    ... ...
+
++   prompt_column: Optional[str] = field(
++       default=None,
++       metadata={"help": "The name of the column in the datasets containing the full texts (for summarization)."},
++   )
++   response_column: Optional[str] = field(
++       default=None,
++       metadata={"help": "The name of the column in the datasets containing the summaries (for summarization)."},
++   )
++   history_column: Optional[str] = field(
++       default=None,
++       metadata={"help": "The name of the column in the datasets containing the history of chat."},
++   )
++   max_source_length: Optional[int] = field(
++       default=1024,
++       metadata={
++           "help": (
++               "The maximum total input sequence length after tokenization. Sequences longer "
++               "than this will be truncated, sequences shorter will be padded."
++           )
++       },
++   )
++   max_target_length: Optional[int] = field(
++       default=128,
++       metadata={
++           "help": (
++               "The maximum total sequence length for target text after tokenization. Sequences longer "
++               "than this will be truncated, sequences shorter will be padded."
++           )
++       },
++   )
++   ignore_pad_token_for_loss: bool = field(
++       default=True,
++       metadata={
++           "help": "Whether to ignore the tokens corresponding to padded labels in the loss computation or not."
++       },
++   )
+```
+
+#### 数据处理
 
 
 

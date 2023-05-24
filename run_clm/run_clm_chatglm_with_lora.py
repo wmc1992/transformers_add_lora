@@ -214,7 +214,38 @@ class DataTrainingArguments:
     )
 
     # --------------------------------------------------------------------------------
+    # 使用 LoRA 微调时新增的数据配置字段
     # --------------------------------------------------------------------------------
+    prompt_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the full texts (for summarization)."},
+    )
+    response_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the summaries (for summarization)."},
+    )
+    history_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the history of chat."},
+    )
+    max_source_length: Optional[int] = field(
+        default=1024,
+        metadata={
+            "help": (
+                "The maximum total input sequence length after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
+            )
+        },
+    )
+    max_target_length: Optional[int] = field(
+        default=128,
+        metadata={
+            "help": (
+                "The maximum total sequence length for target text after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
+            )
+        },
+    )
     ignore_pad_token_for_loss: bool = field(
         default=True,
         metadata={
@@ -222,6 +253,7 @@ class DataTrainingArguments:
         },
     )
     # --------------------------------------------------------------------------------
+    # 使用 LoRA 微调时新增的数据配置字段
     # --------------------------------------------------------------------------------
 
 
