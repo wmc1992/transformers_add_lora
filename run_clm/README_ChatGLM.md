@@ -257,6 +257,9 @@ class DataTrainingArguments:
 -           return metric.compute(predictions=preds, references=labels)
 ```
 
+下面的代码是新的数据处理的代码，删除上述的代码之后，再把下述代码添加上即可。修改后的这部分代码的功能简述如下：
+
+
 
 ```python
 +   prompt_column = data_args.prompt_column
