@@ -16,12 +16,49 @@ ChatGLM 的专项修改的内容为：
 
 ## ChatGLM 专项修改的内容
 
-```
+加载config、tokenizer、model 时添加参数 `trust_remote_code=True`，且加载模型时使用 `AutoModel`，不能使用 `AutoModelForCausalLM`。这部分比较简单，相应的代码修改如下所示。
+
+加载 config：
+
+```python
 if model_args.config_name:
     config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
 elif model_args.model_name_or_path:
 -   config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
 +   config = AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True, **config_kwargs)
+```
+
+加载 tokenizer：
+
+```python
+if model_args.tokenizer_name:
+    tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
+elif model_args.model_name_or_path:
+-   tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
++   tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, trust_remote_code=True, **tokenizer_kwargs)
+```
+
+加载 model，使用 `AutoModel` 同时添加参数 `trust_remote_code=True`：
+
+```python
+if model_args.model_name_or_path:
+    torch_dtype = (
+        model_args.torch_dtype
+        if model_args.torch_dtype in ["auto", None]
+        else getattr(torch, model_args.torch_dtype)
+    )
+-   model = AutoModelForCausalLM.from_pretrained(
++   model = AutoModel.from_pretrained(
+        model_args.model_name_or_path,
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        config=config,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+        torch_dtype=torch_dtype,
+        low_cpu_mem_usage=model_args.low_cpu_mem_usage,
++       trust_remote_code=True,
+    )
 ```
 
 ## 通用的需要修改的内容
