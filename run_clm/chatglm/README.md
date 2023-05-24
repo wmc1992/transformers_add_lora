@@ -126,7 +126,7 @@ class DataTrainingArguments:
 
 下面部分的代码就是原始的 `run_clm.py` 中做数据处理的代码，这里会直接将这部分代码全部删掉，替换为新的数据处理的代码。这部分删掉的代码的功能简述如下：
 
-* 下述代码中的 `tokenize_function` 是对文本做 tokenize，其中对象 raw_datasets 经过该函数处理成 tokenized_datasets，这里的key就是 `input_ids`、`attention_mask`、`token_types`；
+* 下述代码中的函数 `tokenize_function` 是对文本做 tokenize，其中对象 raw_datasets 经过该函数处理成 tokenized_datasets；
 
 * 获取每条文本的最大长度 `block_size`；（这里只有一个最大长度，修改后会有两个最大长度：`max_source_length` 和 `max_target_length`）
 
