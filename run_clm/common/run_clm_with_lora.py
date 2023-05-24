@@ -212,6 +212,49 @@ class DataTrainingArguments:
         default=True, metadata={"help": "Whether to keep line breaks when using TXT files or not."}
     )
 
+    # --------------------------------------------------------------------------------
+    # 使用 LoRA 微调时新增的数据配置字段
+    # --------------------------------------------------------------------------------
+    prompt_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the full texts (for summarization)."},
+    )
+    response_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the summaries (for summarization)."},
+    )
+    history_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the history of chat."},
+    )
+    max_source_length: Optional[int] = field(
+        default=1024,
+        metadata={
+            "help": (
+                "The maximum total input sequence length after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
+            )
+        },
+    )
+    max_target_length: Optional[int] = field(
+        default=128,
+        metadata={
+            "help": (
+                "The maximum total sequence length for target text after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
+            )
+        },
+    )
+    ignore_pad_token_for_loss: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether to ignore the tokens corresponding to padded labels in the loss computation or not."
+        },
+    )
+    # --------------------------------------------------------------------------------
+    # 使用 LoRA 微调时新增的数据配置字段
+    # --------------------------------------------------------------------------------
+
     def __post_init__(self):
         if self.streaming:
             require_version("datasets>=2.0.0", "The streaming feature requires `datasets>=2.0.0`")
@@ -449,6 +492,10 @@ def main():
         column_names = list(raw_datasets["train"].features)
     else:
         column_names = list(raw_datasets["validation"].features)
+
+    # ------------------------------------------------------------------------------------------------------------------------
+    # 
+    # ------------------------------------------------------------------------------------------------------------------------
     text_column_name = "text" if "text" in column_names else column_names[0]
 
     # since this will be pickled to avoid _LazyModule error in Hasher force logger loading before tokenize_function
@@ -569,6 +616,9 @@ def main():
             labels = labels[:, 1:].reshape(-1)
             preds = preds[:, :-1].reshape(-1)
             return metric.compute(predictions=preds, references=labels)
+    # ------------------------------------------------------------------------------------------------------------------------
+    # 
+    # ------------------------------------------------------------------------------------------------------------------------
 
     # -----------------------------------------------------------------------
     # support for LoRA
