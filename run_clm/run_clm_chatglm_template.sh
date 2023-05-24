@@ -13,7 +13,7 @@ target_modules="query_key_value,dense,dense_h_to_4h,dense_4h_to_h"
 lora_dropout=0.05
 
 # 数据与预训练模型的路径配置
-pretrained_model=/the/pretrained/model/name/or/path
+model_name_or_path=/the/pretrained/model/name/or/path
 tokenizer_name=/the/tokenizer/name/or/path
 train_file_path=/the/dataset/file/path
 output_dir=/the/output/directory/to/save/model/and/state
@@ -23,7 +23,7 @@ deepspeed_config_file=ds_zero2_no_offload.json
 
 torchrun --nnodes 1 --nproc_per_node 2 run_clm_chatglm_with_lora.py \
     --deepspeed ${deepspeed_config_file} \
-    --model_name_or_path ${pretrained_model} \
+    --model_name_or_path ${model_name_or_path} \
     --tokenizer_name ${tokenizer_name} \
     --train_file ${train_file_path} \
     --validation_split_percentage 1 \
