@@ -4,7 +4,7 @@
 
 
 
-## 训练脚本修改内容说明
+## 修改内容说明
 
 以 [transformers](https://github.com/huggingface/transformers) 库中的脚本 `examples/pytorch/language-modeling/run_clm.py` 为基准，在其基础上进行修改，用于对 ChatGLM-6B 模型做 LoRA 微调。
 
@@ -20,7 +20,7 @@ ChatGLM 的专项修改的内容为：
 * 加载config、tokenizer、model 时添加参数 `trust_remote_code=True`，且加载模型时使用 `AutoModel`，不能使用 `AutoModelForCausalLM`；
 * 数据处理部分按照官方提供的代码进行处理，否则会有特殊符号报错问题；
 
-## ChatGLM 专项修改的内容
+## ChatGLM 专项修改的内容说明
 
 ### 加载和初始化
 
@@ -415,7 +415,4 @@ class DataTrainingArguments:
 +           return metric.compute(predictions=preds, references=labels)
 ```
 
-
-## 通用的需要修改的内容
-
-
+## 通用的需要修改的内容说明
