@@ -1,5 +1,6 @@
 import torch
 
+
 IGNORE_INDEX = -100
 
 PROMPT_TEMPLATE = (
@@ -26,16 +27,18 @@ class DatasetUtil:
         sources = []
         targets = []
 
-        for prompt, response, history in \
-                zip(examples[self.prompt_column], examples[self.response_column], examples[self.history_column]):
+        # TODO 先实现一个简单版本，不添加额外指令，并且忽略 history 字段。
+        for prompt, response in \
+                zip(examples[self.prompt_column], examples[self.response_column]):
 
-            # TODO 先实现一个简单版本，不添加额外指令，并且忽略 history 字段。
             sources.append(prompt)
             targets.append(response)
 
         return sources, targets
 
     def tokenization(self, examples):
+        max_seq_length = self.max_source_length + self.max_target_length
+
         sources, targets = self.build_source_and_target_content(examples)
 
         tokenized_sources = self.tokenizer(sources, return_attention_mask=False)
@@ -47,9 +50,18 @@ class DatasetUtil:
             s = s[:self.max_source_length]
             t = t[:self.max_target_length]
 
-            input_ids = torch.LongTensor(s + t)
-            labels = torch.LongTensor([IGNORE_INDEX] * len(s) + t)
+            input_ids = s + t
+            labels = [IGNORE_INDEX] * len(s) + t
             assert len(input_ids) == len(labels)
+
+            pad_len = max_seq_length - len(input_ids)
+            input_ids = input_ids + [self.tokenizer.pad_token_id] * pad_len
+            labels = labels + [self.tokenizer.pad_token_id] * pad_len
+            assert len(input_ids) == len(labels)
+
+            input_ids = torch.LongTensor(input_ids)
+            labels = torch.LongTensor(labels)
+
             all_input_ids.append(input_ids)
             all_labels.append(labels)
 
