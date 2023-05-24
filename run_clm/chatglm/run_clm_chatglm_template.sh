@@ -12,7 +12,8 @@ target_modules="query_key_value,dense,dense_h_to_4h,dense_4h_to_h"
 lora_dropout=0.05
 
 # 数据配置
-train_file_path=/the/dataset/file/path
+train_file_path=/the/train/dataset/file/path
+validation_file=/the/validation/dataset/file/path
 prompt_column="prompt"
 response_column="response"
 max_source_length=896
@@ -29,6 +30,7 @@ torchrun --nnodes 1 --nproc_per_node 2 run_clm_chatglm_with_lora.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${model_name_or_path} \
     --train_file ${train_file_path} \
+    --validation_file ${validation_file} \
     --validation_split_percentage 1 \
     --prompt_column ${prompt_column} \
     --response_column ${response_column} \
