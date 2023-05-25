@@ -15,8 +15,6 @@ class DatasetUtil:
     def __init__(self, tokenizer, max_source_length, max_target_length,
                  prompt_column, response_column, history_column):
         self.tokenizer = tokenizer
-        tokenizer.pad_token = tokenizer.eos_token
-
         self.max_source_length = max_source_length
         self.max_target_length = max_target_length
         self.prompt_column = prompt_column
@@ -43,15 +41,19 @@ class DatasetUtil:
 
         tokenized_sources = self.tokenizer(
             sources,
+            max_length=self.max_source_length - 1,
             padding="max_length",
             truncation=True,
-            max_length=self.max_source_length - 1,
+            return_attention_mask=False,
+            return_token_type_ids=False,
         )
         tokenized_targets = self.tokenizer(
             targets,
+            max_length=self.max_target_length - 1,
             padding="max_length",
             truncation=True,
-            max_length=self.max_target_length - 1,
+            return_attention_mask=False,
+            return_token_type_ids=False,
         )
 
         all_input_ids = []

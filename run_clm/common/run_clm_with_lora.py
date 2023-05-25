@@ -486,6 +486,11 @@ def main():
     if len(tokenizer) > embedding_size:
         model.resize_token_embeddings(len(tokenizer))
 
+    # add the special tokens
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        model.resize_token_embeddings(len(tokenizer))
+
     # Preprocessing the datasets.
     # First we tokenize all the texts.
     if training_args.do_train:
