@@ -236,6 +236,7 @@ class MyTrainingArguments(TrainingArguments):
     lora_dropout : Optional[float] = field(default=0.05)
     lora_alpha : Optional[float] = field(default=32.)
     modules_to_save : Optional[str] = field(default=None)
+    fan_in_fan_out : Optional[bool] = field(default=False)
 
 
 def main():
@@ -432,16 +433,25 @@ def main():
             torch_dtype=torch_dtype,
             low_cpu_mem_usage=model_args.low_cpu_mem_usage,
         )
+        logger.info(model.get_input_embeddings())
+        logger.info(model.get_input_embeddings().weight.shape)
     else:
         model = AutoModelForCausalLM.from_config(config)
         n_params = sum({p.data_ptr(): p.numel() for p in model.parameters()}.values())
         logger.info(f"Training new model from scratch - Total size={n_params/2**20:.2f}M params")
+    logger.info(model)
 
     # We resize the embeddings only when necessary to avoid index errors. If you are creating a model from scratch
     # on a small vocab and want a smaller embedding size, remove this test.
+
+    logger.info(model.get_input_embeddings())
+    logger.info(model.get_input_embeddings().weight.shape)
+
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
         model.resize_token_embeddings(len(tokenizer))
+    logger.info(f"The Embedding Size: {embedding_size}, The Tokenizer Len: {len(tokenizer)}")
+    logger.info(model)
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -591,13 +601,15 @@ def main():
             lora_rank = training_args.lora_rank
             lora_dropout = training_args.lora_dropout
             lora_alpha = training_args.lora_alpha
+            fan_in_fan_out = training_args.fan_in_fan_out
 
             logger.info(f"Init LoRA parameters:\n"
                         f"target_modules: {target_modules}\n"
                         f"modules_to_save: {modules_to_save}\n"
                         f"lora_rank: {lora_rank}\n"
                         f"lora_dropout: {lora_dropout}\n"
-                        f"lora_alpha: {lora_alpha}")
+                        f"lora_alpha: {lora_alpha}\n"
+                        f"fan_in_fan_out: {fan_in_fan_out}")
 
             peft_config = LoraConfig(
                 task_type=TaskType.CAUSAL_LM, 
@@ -607,6 +619,7 @@ def main():
                 lora_alpha=lora_alpha, 
                 lora_dropout=lora_dropout,
                 modules_to_save=modules_to_save,
+                fan_in_fan_out=fan_in_fan_out,
             )
             model = get_peft_model(model, peft_config)
 
