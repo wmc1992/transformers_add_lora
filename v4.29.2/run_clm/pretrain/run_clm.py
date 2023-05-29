@@ -377,7 +377,8 @@ def main():
     # on a small vocab and want a smaller embedding size, remove this test.
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
-        model.resize_token_embeddings(len(tokenizer))
+        model.resize_token_embeddings(len(tokenizer))  # 这里会同时调整最后的 lm_head 层的维度
+    logger.info(model)
     logger.info(f"The Embedding Size: {embedding_size}, The Tokenizer Len: {len(tokenizer)}")
 
     # Get the datasets: you can either provide your own CSV/JSON/TXT training and evaluation files (see below)
