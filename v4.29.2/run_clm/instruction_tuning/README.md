@@ -14,7 +14,7 @@
 
 * 对数据格式以及数据处理部分做修改，数据格式为两个字段：`prompt` 和 `response`；
 * 增加对 LoRA 的支持；
-    
+
 ## 数据处理部分
 
 原始 `run_clm.py` 脚本是直接将数据中的文本作为输入，然后向后偏移一位之后作为 labels，而目前的应用场景更多是输入和输出是不同的，所以这里修改了数据格式，并且会按照新的数据格式添加相应的参数，以及修改相应的数据处理部分的代码。
@@ -217,8 +217,8 @@ class DataTrainingArguments:
 
 ```python
 + from build_dataset import DatasetUtil
-
-
++
++
 +   datasetutil = DatasetUtil(tokenizer, data_args.max_source_length, data_args.max_target_length,
 +                             data_args.prompt_column, data_args.response_column, data_args.history_column)
 +
