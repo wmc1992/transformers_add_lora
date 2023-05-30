@@ -171,8 +171,6 @@ class DataTrainingArguments:
 
 * 将所有的文本按照上述的最大长度进行分组，所谓分组就是：当某条数据超过了最大长度，那么超出的部分会拼接到下一条数据中；（这个逻辑修改后就被去除了）
 
-* 使配置的参数 `max_train_samples` 和 `max_eval_samples` 生效，这两个参数的作用是训练集和验证集中分别使用多少条数据，多余的数据就不使用了；（这个逻辑修改后还是会保留的）
-
 ```python
 -   text_column_name = "text" if "text" in column_names else column_names[0]
 -
@@ -261,39 +259,6 @@ class DataTrainingArguments:
 -               group_texts,
 -               batched=True,
 -           )
--
--   if training_args.do_train:
--       if "train" not in tokenized_datasets:
--           raise ValueError("--do_train requires a train dataset")
--       train_dataset = lm_datasets["train"]
--       if data_args.max_train_samples is not None:
--           max_train_samples = min(len(train_dataset), data_args.max_train_samples)
--           train_dataset = train_dataset.select(range(max_train_samples))
--
--   if training_args.do_eval:
--       if "validation" not in tokenized_datasets:
--           raise ValueError("--do_eval requires a validation dataset")
--       eval_dataset = lm_datasets["validation"]
--       if data_args.max_eval_samples is not None:
--           max_eval_samples = min(len(eval_dataset), data_args.max_eval_samples)
--           eval_dataset = eval_dataset.select(range(max_eval_samples))
--
--       def preprocess_logits_for_metrics(logits, labels):
--           if isinstance(logits, tuple):
--               # Depending on the model and config, logits may contain extra tensors,
--               # like past_key_values, but logits always come first
--               logits = logits[0]
--           return logits.argmax(dim=-1)
--
--       metric = evaluate.load("accuracy")
--
--       def compute_metrics(eval_preds):
--           preds, labels = eval_preds
--           # preds have the same shape as the labels, after the argmax(-1) has been calculated
--           # by preprocess_logits_for_metrics but we need to shift the labels
--           labels = labels[:, 1:].reshape(-1)
--           preds = preds[:, :-1].reshape(-1)
--           return metric.compute(predictions=preds, references=labels)
 ```
 
 下面的代码是新的数据处理的代码，删除上述的代码之后，再把下述代码添加上即可。修改后的这部分代码的功能简述如下：
@@ -329,8 +294,6 @@ class DataTrainingArguments:
 * 首先是对文本做 tokenize，其中对象 raw_datasets 经过该函数处理成 tokenized_datasets；
 
 * 每条文本使用 `max_source_length` 和 `max_target_length` 分别对输入和输出进行截断；
-
-* 使配置的参数 `max_train_samples` 和 `max_eval_samples` 生效，这两个参数的作用是训练集和验证集中分别使用多少条数据，多余的数据就不使用了；（这个逻辑和修改前是一样的）
 
 ```python
 + import torch
