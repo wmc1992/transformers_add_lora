@@ -295,21 +295,6 @@ class DatasetUtil:
         self.history_column = history_column
         self.prompt_type = prompt_type
 
-    def build_source_and_target_content(self, examples):
-        """ 如果想设计不同的指令或者提示，可以修改这个函数 """
-
-        sources = []
-        targets = []
-
-        # TODO 先实现一个简单版本，不添加额外指令，并且忽略 history 字段。
-        for prompt, response in \
-                zip(examples[self.prompt_column], examples[self.response_column]):
-
-            sources.append(prompt)
-            targets.append(response)
-
-        return sources, targets
-
     def tokenization(self, examples):
         f = prompt_type_to_func.get(self.prompt_type, "default")
         sources, targets = f(examples, self.prompt_column, self.response_column, self.history_column)
