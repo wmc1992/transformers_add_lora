@@ -295,6 +295,8 @@ class DataTrainingArguments:
 
 * 每条文本使用 `max_source_length` 和 `max_target_length` 分别对输入和输出进行截断；
 
+* 然后对于输入和输出可以调用不同的函数构造不同类型的 prompt（这个是新增的逻辑）；
+
 ```python
 + import torch
 + 
