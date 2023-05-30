@@ -12,8 +12,89 @@
 
 通用的需要修改的内容为：
 
-* 对数据格式以及数据处理部分做修改，数据格式为两个字段：`prompt` 和 `response`；
 * 增加对 LoRA 的支持；
+* 对数据格式以及数据处理部分做修改，数据格式为两个字段：`prompt` 和 `response`；
+
+## 增加对 LoRA 的支持
+
+导入包的部分比较简单，如下代码所示：
+
+```python
++ from peft import LoraConfig, TaskType, get_peft_model, PeftModel, get_peft_model_state_dict
+```
+
+要支持 LoRA，首先要可以传入相关的参数，这个通过继承 `TrainingArguments` 实现，代码如下：
+
+```python
++ @dataclass
++ class MyTrainingArguments(TrainingArguments):
++     use_peft : Optional[bool] = field(default=False)  # 是否使用peft
++     peft_path : Optional[str] = field(default=None)  # 使用peft预训练的模型
++     target_modules : Optional[str] = field(default="q_proj,v_proj") # 对哪些层使用 LoRA
++     lora_rank : Optional[int] = field(default=8)
++     lora_dropout : Optional[float] = field(default=0.05)
++     lora_alpha : Optional[float] = field(default=32.)
++     modules_to_save : Optional[str] = field(default=None)
++     fan_in_fan_out : Optional[bool] = field(default=False)
+```
+
+定义了上述 `MyTrainingArguments` 对象之后，在 `main()` 函数中修改为使用该类，代码如下：
+
+```python
+-   parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
++   parser = HfArgumentParser((ModelArguments, DataTrainingArguments, MyTrainingArguments))
+```
+
+剩下的就是在基准模型初始化完成之后，使用 peft 库对基准模型增加上 LoRA 部分就可以了，代码如下：
+
+```python
++   if training_args.use_peft:
++       model.gradient_checkpointing_enable()
++       model.enable_input_require_grads()
++       model.config.use_cache = (False) # silence the warnings. Please re-enable for inference!
++
++       if training_args.peft_path is not None:
++           logger.info("Peft from pre-trained model")
++           model = PeftModel.from_pretrained(model, training_args.peft_path)
++       else:
++           logger.info("Init new peft model")
++
++           target_modules = training_args.target_modules.split(',')
++           modules_to_save = training_args.modules_to_save
++           if modules_to_save is not None:
++               modules_to_save = modules_to_save.split(',')
++           lora_rank = training_args.lora_rank
++           lora_dropout = training_args.lora_dropout
++           lora_alpha = training_args.lora_alpha
++           fan_in_fan_out = training_args.fan_in_fan_out
++
++           logger.info(f"Init LoRA parameters:\n"
++                       f"target_modules: {target_modules}\n"
++                       f"modules_to_save: {modules_to_save}\n"
++                       f"lora_rank: {lora_rank}\n"
++                       f"lora_dropout: {lora_dropout}\n"
++                       f"lora_alpha: {lora_alpha}\n"
++                       f"fan_in_fan_out: {fan_in_fan_out}")
++
++           peft_config = LoraConfig(
++               task_type=TaskType.CAUSAL_LM, 
++               target_modules=target_modules,
++               inference_mode=False, 
++               r=lora_rank, 
++               lora_alpha=lora_alpha, 
++               lora_dropout=lora_dropout,
++               modules_to_save=modules_to_save,
++               fan_in_fan_out=fan_in_fan_out,
++           )
++           model = get_peft_model(model, peft_config)
++
++       model.print_trainable_parameters()
++       logger.info(f"model.modules_to_save: {model.modules_to_save}")
++       old_state_dict = model.state_dict
++       model.state_dict = (
++           lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
++       ).__get__(model, type(model))
+```
 
 ## 数据处理部分
 
