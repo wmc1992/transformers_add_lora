@@ -40,6 +40,7 @@ from transformers import (
     MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
     AutoModelForCausalLM,
+    AutoModel,
     AutoTokenizer,
     HfArgumentParser,
     Trainer,
@@ -211,6 +212,50 @@ class DataTrainingArguments:
         default=True, metadata={"help": "Whether to keep line breaks when using TXT files or not."}
     )
 
+    # --------------------------------------------------------------------------------
+    # 使用 LoRA 微调时新增的数据配置字段
+    # --------------------------------------------------------------------------------
+    prompt_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the full texts (for summarization)."},
+    )
+    response_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the summaries (for summarization)."},
+    )
+    history_column: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name of the column in the datasets containing the history of chat."},
+    )
+    max_source_length: Optional[int] = field(
+        default=1024,
+        metadata={
+            "help": (
+                "The maximum total input sequence length after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
+            )
+        },
+    )
+    max_target_length: Optional[int] = field(
+        default=128,
+        metadata={
+            "help": (
+                "The maximum total sequence length for target text after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
+            )
+        },
+    )
+    ignore_pad_token_for_loss: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether to ignore the tokens corresponding to padded labels in the loss computation or not."
+        },
+    )
+    # --------------------------------------------------------------------------------
+    # 使用 LoRA 微调时新增的数据配置字段
+    # --------------------------------------------------------------------------------
+
+
     def __post_init__(self):
         if self.streaming:
             require_version("datasets>=2.0.0", "The streaming feature requires `datasets>=2.0.0`")
@@ -315,7 +360,7 @@ def main():
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
     elif model_args.model_name_or_path:
-        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+        config = AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True, **config_kwargs)
     else:
         config = CONFIG_MAPPING[model_args.model_type]()
         logger.warning("You are instantiating a new config instance from scratch.")
@@ -333,7 +378,7 @@ def main():
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, trust_remote_code=True, **tokenizer_kwargs)
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
@@ -346,7 +391,7 @@ def main():
             if model_args.torch_dtype in ["auto", None]
             else getattr(torch, model_args.torch_dtype)
         )
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModel.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -355,6 +400,7 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
             torch_dtype=torch_dtype,
             low_cpu_mem_usage=model_args.low_cpu_mem_usage,
+            trust_remote_code=True,
         )
         logger.info("Load Model Parameter:\n"
                     f"model_name_or_path: {model_args.model_name_or_path}\n"
@@ -463,111 +509,139 @@ def main():
         column_names = list(raw_datasets["train"].features)
     else:
         column_names = list(raw_datasets["validation"].features)
-    text_column_name = "text" if "text" in column_names else column_names[0]
 
-    # since this will be pickled to avoid _LazyModule error in Hasher force logger loading before tokenize_function
-    tok_logger = transformers.utils.logging.get_logger("transformers.tokenization_utils_base")
+    # ------------------------------------------------------------------------------------------------------------------------
+    # 针对 ChatGLM 的数据处理
+    # ------------------------------------------------------------------------------------------------------------------------
+    prompt_column = data_args.prompt_column
+    response_column = data_args.response_column
+    history_column = data_args.history_column
 
-    def tokenize_function(examples):
-        with CaptureLogger(tok_logger) as cl:
-            output = tokenizer(examples[text_column_name])
-        # clm input could be much much longer than block_size
-        if "Token indices sequence length is longer than the" in cl.out:
-            tok_logger.warning(
-                "^^^^^^^^^^^^^^^^ Please ignore the warning above - this long input will be chunked into smaller bits"
-                " before being passed to the model."
-            )
-        return output
+    def preprocess_function_eval(examples):
+        inputs, targets = [], []
+        for i in range(len(examples[prompt_column])):
+            if examples[prompt_column][i] and examples[response_column][i]:
+                query = examples[prompt_column][i]
+                if history_column is None or len(examples[history_column][i]) == 0:
+                    prompt = query
+                else:
+                    prompt = ""
+                    history = examples[history_column][i]
+                    for turn_idx, (old_query, response) in enumerate(history):
+                        prompt += "[Round {}]\n问：{}\n答：{}\n".format(turn_idx, old_query, response)
+                    prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
+                inputs.append(prompt)
+                targets.append(examples[response_column][i])
 
-    with training_args.main_process_first(desc="dataset map tokenization"):
-        if not data_args.streaming:
-            tokenized_datasets = raw_datasets.map(
-                tokenize_function,
-                batched=True,
-                num_proc=data_args.preprocessing_num_workers,
-                remove_columns=column_names,
-                load_from_cache_file=not data_args.overwrite_cache,
-                desc="Running tokenizer on dataset",
-            )
-        else:
-            tokenized_datasets = raw_datasets.map(
-                tokenize_function,
-                batched=True,
-                remove_columns=column_names,
-            )
+        model_inputs = tokenizer(inputs, max_length=data_args.max_source_length, truncation=True, padding=True)
+        labels = tokenizer(text_target=targets, max_length=data_args.max_target_length, truncation=True)
 
-    if data_args.block_size is None:
-        block_size = tokenizer.model_max_length
-        if block_size > 1024:
-            logger.warning(
-                "The chosen tokenizer supports a `model_max_length` that is longer than the default `block_size` value"
-                " of 1024. If you would like to use a longer `block_size` up to `tokenizer.model_max_length` you can"
-                " override this default with `--block_size xxx`."
-            )
-            block_size = 1024
-    else:
-        if data_args.block_size > tokenizer.model_max_length:
-            logger.warning(
-                f"The block_size passed ({data_args.block_size}) is larger than the maximum length for the model"
-                f"({tokenizer.model_max_length}). Using block_size={tokenizer.model_max_length}."
-            )
-        block_size = min(data_args.block_size, tokenizer.model_max_length)
+        if data_args.ignore_pad_token_for_loss:
+            labels["input_ids"] = [
+                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
+            ]
+        model_inputs["labels"] = labels["input_ids"]
 
-    # Main data processing function that will concatenate all texts from our dataset and generate chunks of block_size.
-    def group_texts(examples):
-        # Concatenate all texts.
-        concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
-        total_length = len(concatenated_examples[list(examples.keys())[0]])
-        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-        # customize this part to your needs.
-        if total_length >= block_size:
-            total_length = (total_length // block_size) * block_size
-        # Split by chunks of max_len.
-        result = {
-            k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
-            for k, t in concatenated_examples.items()
+        return model_inputs
+
+    def preprocess_function_train(examples):
+        max_seq_length = data_args.max_source_length + data_args.max_target_length
+
+        model_inputs = {
+            "input_ids": [],
+            "labels": [],
         }
-        result["labels"] = result["input_ids"].copy()
-        return result
+        for i in range(len(examples[prompt_column])):
+            if examples[prompt_column][i] and examples[response_column][i]:
+                query, answer = examples[prompt_column][i], examples[response_column][i]
 
-    # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a remainder
-    # for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value might be slower
-    # to preprocess.
-    #
-    # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
-    # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
+                if history_column is None:
+                    prompt = query
+                else:
+                    prompt = ""
+                    history = examples[history_column][i]
+                    for turn_idx, (old_query, response) in enumerate(history):
+                        prompt += "[Round {}]\n问：{}\n答：{}\n".format(turn_idx, old_query, response)
+                    prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
 
-    with training_args.main_process_first(desc="grouping texts together"):
-        if not data_args.streaming:
-            lm_datasets = tokenized_datasets.map(
-                group_texts,
-                batched=True,
-                num_proc=data_args.preprocessing_num_workers,
-                load_from_cache_file=not data_args.overwrite_cache,
-                desc=f"Grouping texts in chunks of {block_size}",
-            )
-        else:
-            lm_datasets = tokenized_datasets.map(
-                group_texts,
-                batched=True,
-            )
+                a_ids = tokenizer.encode(text=prompt, add_special_tokens=False)
+                b_ids = tokenizer.encode(text=answer, add_special_tokens=False)
+
+                if len(a_ids) > data_args.max_source_length - 1:
+                    a_ids = a_ids[: data_args.max_source_length - 1]
+
+                if len(b_ids) > data_args.max_target_length - 2:
+                    b_ids = b_ids[: data_args.max_target_length - 2]
+
+                input_ids = tokenizer.build_inputs_with_special_tokens(a_ids, b_ids)
+
+                context_length = input_ids.index(tokenizer.bos_token_id)
+                mask_position = context_length - 1
+                labels = [-100] * context_length + input_ids[mask_position+1:]
+                
+                pad_len = max_seq_length - len(input_ids)
+                input_ids = input_ids + [tokenizer.pad_token_id] * pad_len
+                labels = labels + [tokenizer.pad_token_id] * pad_len
+                if data_args.ignore_pad_token_for_loss:
+                    labels = [(l if l != tokenizer.pad_token_id else -100) for l in labels]
+
+                model_inputs["input_ids"].append(input_ids)
+                model_inputs["labels"].append(labels)
+
+        return model_inputs
 
     if training_args.do_train:
-        if "train" not in tokenized_datasets:
+        if "train" not in raw_datasets:
             raise ValueError("--do_train requires a train dataset")
-        train_dataset = lm_datasets["train"]
+        train_dataset = raw_datasets["train"]
         if data_args.max_train_samples is not None:
             max_train_samples = min(len(train_dataset), data_args.max_train_samples)
             train_dataset = train_dataset.select(range(max_train_samples))
+        with training_args.main_process_first(desc="train dataset map pre-processing"):
+            train_dataset = train_dataset.map(
+                preprocess_function_train,
+                batched=True,
+                num_proc=data_args.preprocessing_num_workers,
+                remove_columns=column_names,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc="Running tokenizer on train dataset",
+            )
 
     if training_args.do_eval:
-        if "validation" not in tokenized_datasets:
+        if "validation" not in raw_datasets:
             raise ValueError("--do_eval requires a validation dataset")
-        eval_dataset = lm_datasets["validation"]
+        eval_dataset = raw_datasets["validation"]
         if data_args.max_eval_samples is not None:
             max_eval_samples = min(len(eval_dataset), data_args.max_eval_samples)
             eval_dataset = eval_dataset.select(range(max_eval_samples))
+        with training_args.main_process_first(desc="validation dataset map pre-processing"):
+            eval_dataset = eval_dataset.map(
+                preprocess_function_eval,
+                batched=True,
+                num_proc=data_args.preprocessing_num_workers,
+                remove_columns=column_names,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc="Running tokenizer on validation dataset",
+            )
 
+    if training_args.do_predict:
+        if "test" not in raw_datasets:
+            raise ValueError("--do_predict requires a test dataset")
+        predict_dataset = raw_datasets["test"]
+        if data_args.max_predict_samples is not None:
+            max_predict_samples = min(len(predict_dataset), data_args.max_predict_samples)
+            predict_dataset = predict_dataset.select(range(max_predict_samples))
+        with training_args.main_process_first(desc="prediction dataset map pre-processing"):
+            predict_dataset = predict_dataset.map(
+                preprocess_function_eval,
+                batched=True,
+                num_proc=data_args.preprocessing_num_workers,
+                remove_columns=column_names,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc="Running tokenizer on prediction dataset",
+            )
+
+    if training_args.do_eval:
         def preprocess_logits_for_metrics(logits, labels):
             if isinstance(logits, tuple):
                 # Depending on the model and config, logits may contain extra tensors,
@@ -584,6 +658,9 @@ def main():
             labels = labels[:, 1:].reshape(-1)
             preds = preds[:, :-1].reshape(-1)
             return metric.compute(predictions=preds, references=labels)
+    # ------------------------------------------------------------------------------------------------------------------------
+    # 针对 ChatGLM 的数据处理
+    # ------------------------------------------------------------------------------------------------------------------------
 
     # -----------------------------------------------------------------------
     # support for LoRA
