@@ -31,16 +31,16 @@ deepspeed_config_file=../ds_zero2_no_offload.json
 accelerate_config_file=../accelerate_config_two_process.yaml
 
 # 直接使用 python 启动
-# CUDA_VISIBLE_DEVICES=0 python3 run_clm.py
+# CUDA_VISIBLE_DEVICES=0 python3 run_clm_with_lora.py
 
 # 使用 accelerate 启动
 # CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
 #     --config_file ${accelerate_config_file} \
-#     run_clm.py \
+#     run_clm_with_lora.py \
 
 # 使用 deepspeed 启动
 torchrun --nnodes 1 --nproc_per_node 2 \
-    run_clm.py \
+    run_clm_with_lora.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${model_name_or_path} \
     --train_file ${train_file_path} \
