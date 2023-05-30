@@ -54,7 +54,7 @@ from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel, get_peft_model_state_dict
-from build_dataset import DatasetUtil
+from build_dataset import DatasetUtil, prompt_type_to_func
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.29.0")
@@ -215,6 +215,10 @@ class DataTrainingArguments:
     # --------------------------------------------------------------------------------
     # 使用 LoRA 微调时新增的数据配置字段
     # --------------------------------------------------------------------------------
+    prompt_type: Optional[str] = field(
+        default=None,
+        metadata={"help": f"The type of prompt to build input text, from list of {','.join(list(prompt_type_to_func.keys()))}"},
+    )
     prompt_column: Optional[str] = field(
         default=None,
         metadata={"help": "The name of the column in the datasets containing the full texts (for summarization)."},
