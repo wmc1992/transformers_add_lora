@@ -21,8 +21,20 @@ model_name_or_path=/the/pretrained/model/name/or/path
 output_dir=/the/output/directory/to/save/model/and/state
 
 # deepspeed配置
-deepspeed_config_file=../ds_zero3_no_offload.json
+deepspeed_config_file=../ds_zero2_no_offload.json
 
+# accelerate配置
+accelerate_config_file=../accelerate_config_two_process.yaml
+
+# 直接使用 python 启动
+# CUDA_VISIBLE_DEVICES=0 python3 run_clm.py
+
+# 使用 accelerate 启动
+# CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
+#     --config_file ${accelerate_config_file} \
+#     run_clm.py \
+
+# 使用 deepspeed 启动
 torchrun --nnodes 1 --nproc_per_node 6 run_clm.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${model_name_or_path} \
