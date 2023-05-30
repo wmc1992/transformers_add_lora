@@ -324,7 +324,7 @@ class DataTrainingArguments:
 +           )
 ```
 
-不够可以很明显看出上述代码并不是核心的数据处理逻辑，核心的数据处理逻辑提出来放到了脚本 `build_dataset.py` 中，该脚本的代码如下。然后描述一下修改后的数据处理的逻辑为：
+不过可以很明显看出上述代码并不是核心的数据处理逻辑，核心的数据处理逻辑提出来放到了脚本 `build_dataset.py` 中，该脚本的代码如下。然后描述一下修改后的数据处理的逻辑为：
 
 * 首先是对文本做 tokenize，其中对象 raw_datasets 经过该函数处理成 tokenized_datasets；
 
