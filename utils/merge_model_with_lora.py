@@ -89,5 +89,10 @@ else:
         assert base_model_sd[original_key].dtype == torch.float16
 
 torch.save(base_model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+print("Model Save Success:", os.path.join(output_dir, "pytorch_model.bin"))
+
 base_model.config.to_json_file(os.path.join(output_dir, "config.json"))
+print("Model Config Save Success:", os.path.join(output_dir, "config.json"))
+
 tokenizer.save_pretrained(output_dir)
+print("Tokenizer Save Success.")
