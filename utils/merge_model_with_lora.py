@@ -12,21 +12,20 @@ parser.add_argument("--base_model", default=None, required=True,
                     type=str, help="Please specify a base_model")
 parser.add_argument("--lora_model", default=None, required=True,
                     type=str, help="Please specify LoRA models to be merged (ordered); use commas to separate multiple LoRA models.")
-parser.add_argument("--output_dir", default="./", type=str)
+parser.add_argument("--output_dir", default=None, required=True, type=str)
+args = parser.parse_args()
 
 
 def transpose(weight, fan_in_fan_out):
     return weight.T if fan_in_fan_out else weight
 
 
-args = parser.parse_args()
 base_model_path = args.base_model
 lora_model_path = args.lora_model
 output_dir = args.output_dir
-print(f"Base model: {base_model_path}")
-print(f"LoRA model(s) {lora_model_path}:")
 
 # 载入 base model
+print(f"Start Load Base Model: {base_model_path}")
 config = AutoConfig.from_pretrained(base_model_path)
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_path,
@@ -34,27 +33,35 @@ base_model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.float16,
     device_map={"": "cpu"},
 )
+print("Base Model Load Success.")
 
-print(f"Loading LoRA {lora_model_path}")
 tokenizer = AutoTokenizer.from_pretrained(lora_model_path)
 if base_model.get_input_embeddings().weight.size(0) != len(tokenizer):
     base_model.resize_token_embeddings(len(tokenizer))
     print(f"Extended vocabulary size to {len(tokenizer)}")
 
 
+
 if hasattr(peft.LoraModel,"merge_and_unload") and config.model_type != "gpt2":
     # 载入 lora model
+    print(f"Start Load LoRA Model: {lora_model_path}")
     lora_model = PeftModel.from_pretrained(
         base_model,
         lora_model_path,
         device_map={"": "cpu"},
         torch_dtype=torch.float16,
     )
+    print("LoRA Model Load Success.")
+
     # 调用 LoraModel 的 merge_and_unload() 进行合并
+    print("Merge LoRA Model With Peft merge_and_unload() Function")
     base_model = lora_model.merge_and_unload()
 else:
-    base_model_sd = base_model.state_dict()
+    print(f"Start Load LoRA Model: {lora_model_path}")
     lora_model_sd = torch.load(os.path.join(lora_model_path, "adapter_model.bin"), map_location="cpu")
+    print("LoRA Model Load Success.")
+
+    base_model_sd = base_model.state_dict()
 
     lora_config = peft.LoraConfig.from_pretrained(lora_model_path)
     lora_scaling = lora_config.lora_alpha / lora_config.r
@@ -63,12 +70,12 @@ else:
     non_lora_keys = [k for k in lora_model_sd if not "lora_" in k]
 
     for k in non_lora_keys:
-        print(f"merging {k}")
+        print(f"Merging No LoRA Layer: {k}")
         original_k = k.replace("base_model.model.", "")
         base_model_sd[original_k].copy_(lora_model_sd[k])
 
     for k in lora_keys:
-        print(f"merging {k}")
+        print(f"Merging LoRA Layer: {k}")
         original_key = k.replace(".lora_A", "").replace("base_model.model.", "")
         assert original_key in base_model_sd
 
