@@ -534,13 +534,16 @@ def main():
                 targets.append(examples[response_column][i])
 
         model_inputs = tokenizer(inputs, max_length=data_args.max_source_length, truncation=True, padding=True)
-        labels = tokenizer(text_target=targets, max_length=data_args.max_target_length, truncation=True)
+        labels = tokenizer(text_target=targets, max_length=data_args.max_target_length, truncation=True, padding=True)
 
         if data_args.ignore_pad_token_for_loss:
             labels["input_ids"] = [
                 [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
             ]
         model_inputs["labels"] = labels["input_ids"]
+
+        logger.info([len(x) for x in model_inputs["input_ids"]])
+        logger.info([len(x) for x in model_inputs["labels"]])
 
         return model_inputs
 
