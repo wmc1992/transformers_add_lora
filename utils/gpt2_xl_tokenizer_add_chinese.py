@@ -8,7 +8,7 @@ from tokenizers.processors import ByteLevel as PostByteLevel
 from tokenizers.decoders import ByteLevel as DecodeByteLevel
 from tokenizers.trainers import BpeTrainer
 
-# 功能：对 gpt2-xl 的 tokenizer 中增加中文
+# 功能：向 gpt2-xl 的 tokenizer 中增加中文词语，支持对中文语料做继续预训练
 
 # --------------------------------------------------------------------------------
 # 使用自己的语料训练一个新的中文 tokenizer
