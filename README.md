@@ -1,4 +1,6 @@
-# Transformers add Peft
+# Transformers add LoRA
+
+对 [transformers](https://github.com/huggingface/transformers) 这个库中所支持的模型使用 LoRA 进行微调。
 
 ## 目录结构及功能
 
