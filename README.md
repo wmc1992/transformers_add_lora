@@ -7,8 +7,6 @@
 ```
 ├── legacy  # 丢弃的代码
 │
-├── test  # 测试的代码
-│
 ├── utils
 │   ├── gpt2_xl_tokenizer_add_chinese.py  # 对gpt2-xl模型增加中文词表
 │   ├── merge_model_with_lora.py  # 将LoRA模型合并到主干模型上
