@@ -24,7 +24,7 @@ model_name_or_path=/the/pretrained/model/name/or/path
 output_dir=/the/output/directory/to/save/model/and/state
 
 # deepspeed配置
-deepspeed_config_file=../ds_zero2_no_offload.json
+deepspeed_config_file=../../ds_zero2_no_offload.json
 
 torchrun --nnodes 1 --nproc_per_node 2 run_clm_with_lora.py \
     --deepspeed ${deepspeed_config_file} \

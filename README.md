@@ -7,9 +7,7 @@
 ```
 ├── legacy  # 丢弃的代码
 │
-├── inference_test  # 测试的代码
-│   ├── inference.py
-│   └── run_inference.sh
+├── test  # 测试的代码
 │
 ├── utils
 │   ├── gpt2_xl_tokenizer_add_chinese.py  # 对gpt2-xl模型增加中文词表
@@ -18,15 +16,15 @@
 │
 └── v4.29.2  # 该目录下的脚本使用的 transformers 版本为 v4.29.2
     │
+    ├── accelerate_config_one_process.yaml  # 使用 accelerate 做单卡训练的配置
+    │
+    ├── accelerate_config_two_process.yaml  # 使用 accelerate 做两卡训练的配置
+    │
+    ├── ds_zero2_no_offload.json  # 使用 deepspeed 的 zero2 时的配置
+    │
+    ├── ds_zero3_no_offload.json  # 使用 deepspeed 的 zero3 时的配置
+    │
     └── run_clm  # 模型类型为 causal language modeling，即都是生成式模型
-        │
-        ├── accelerate_config_one_process.yaml  # 使用 accelerate 做单卡训练的配置
-        │
-        ├── accelerate_config_two_process.yaml  # 使用 accelerate 做两卡训练的配置
-        │
-        ├── ds_zero2_no_offload.json  # 使用 deepspeed 的 zero2 时的配置
-        │
-        ├── ds_zero3_no_offload.json  # 使用 deepspeed 的 zero3 时的配置
         │
         ├── instruction_tuning  # 对一般模型使用 LoRA 做指令微调的代码
         │

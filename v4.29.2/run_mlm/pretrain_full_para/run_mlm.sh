@@ -5,12 +5,6 @@ per_device_eval_batch_size=8
 gradient_accumulation_steps=4
 training_steps=3000
 
-# LoRA 训练配置
-lora_rank=8
-lora_alpha=32
-target_modules="c_attn" # 需要根据不同的模型做修改
-lora_dropout=0.05
-
 # 数据配置
 train_file_path=/the/train/dataset/file/path
 validation_file=/the/validation/dataset/file/path
@@ -29,14 +23,14 @@ accelerate_config_file=../../accelerate_config_two_process.yaml
 # 直接使用 python 启动
 # CUDA_VISIBLE_DEVICES=0 python3 run_clm_with_lora.py
 
-# 使用 accelerate 启动
-# CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
-#     --config_file ${accelerate_config_file} \
-#     run_clm_with_lora.py \
-
 # 使用 deepspeed 启动
-torchrun --nnodes 1 --nproc_per_node 6 run_clm_with_lora.py \
-    --deepspeed ${deepspeed_config_file} \
+# torchrun --nnodes 1 --nproc_per_node 2 run_mlm.py \
+#     --deepspeed ${deepspeed_config_file} \
+
+# 使用 accelerate 启动
+CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
+    --config_file ${accelerate_config_file} \
+    run_clm_with_lora.py \
     --model_name_or_path ${model_name_or_path} \
     --train_file ${train_file_path} \
     --validation_file ${validation_file} \
