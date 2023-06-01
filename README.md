@@ -3,9 +3,9 @@
 ## 目录结构及功能
 
 ```
-├── legacy
+├── legacy  # 丢弃的代码
 │
-├── inference_test
+├── inference_test  # 测试的代码
 │   ├── inference.py
 │   └── run_inference.sh
 │
