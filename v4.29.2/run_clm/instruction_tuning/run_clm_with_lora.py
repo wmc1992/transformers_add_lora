@@ -516,7 +516,8 @@ def main():
     # 新的数据处理的逻辑
     # ------------------------------------------------------------------------------------------------------------------------
     datasetutil = DatasetUtil(tokenizer, data_args.max_source_length, data_args.max_target_length,
-                              data_args.prompt_column, data_args.response_column, data_args.history_column)
+                              data_args.prompt_column, data_args.response_column, data_args.history_column,
+                              prompt_type=data_args.prompt_type)
 
     logger.info("开始处理数据")
     with training_args.main_process_first(desc="dataset map tokenization"):
