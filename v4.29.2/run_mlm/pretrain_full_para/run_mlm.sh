@@ -8,7 +8,7 @@ training_steps=3000
 # 数据配置
 train_file_path=/the/train/dataset/file/path
 validation_file=/the/validation/dataset/file/path
-block_size=1024
+max_seq_length=1024
 
 # 预训练模型的路径配置
 model_name_or_path=/the/pretrained/model/name/or/path
@@ -35,7 +35,7 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
     --train_file ${train_file_path} \
     --validation_file ${validation_file} \
     --validation_split_percentage 1 \
-    --block_size ${block_size} \
+    --max_seq_length ${max_seq_length} \
     --per_device_train_batch_size ${per_device_train_batch_size} \
     --per_device_eval_batch_size ${per_device_eval_batch_size} \
     --gradient_accumulation_steps ${gradient_accumulation_steps} \
@@ -60,11 +60,5 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
     --overwrite_output_dir \
     --ddp_timeout 30000 \
     --logging_first_step True \
-    --use_peft True \
-    --lora_rank ${lora_rank} \
-    --lora_alpha ${lora_alpha} \
-    --target_modules ${target_modules} \
-    --lora_dropout ${lora_dropout} \
-    --torch_dtype float16 \
     --gradient_checkpointing \
     --ddp_find_unused_parameters False

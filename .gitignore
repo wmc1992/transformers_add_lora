@@ -76,6 +76,8 @@ site*/
 
 .DS_store
 
+test*/
+
 ~*
 
 exp_run_*.sh
