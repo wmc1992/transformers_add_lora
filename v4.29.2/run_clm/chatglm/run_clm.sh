@@ -1,5 +1,5 @@
 # 常规训练配置
-lr=5e-6
+lr=5e-5
 per_device_train_batch_size=8
 per_device_eval_batch_size=8
 gradient_accumulation_steps=4
