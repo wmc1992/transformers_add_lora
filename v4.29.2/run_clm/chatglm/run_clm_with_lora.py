@@ -517,32 +517,6 @@ def main():
     response_column = data_args.response_column
     history_column = data_args.history_column
 
-    def preprocess_function_eval(examples):
-        inputs, targets = [], []
-        for i in range(len(examples[prompt_column])):
-            if examples[prompt_column][i] and examples[response_column][i]:
-                query = examples[prompt_column][i]
-                if history_column is None or len(examples[history_column][i]) == 0:
-                    prompt = query
-                else:
-                    prompt = ""
-                    history = examples[history_column][i]
-                    for turn_idx, (old_query, response) in enumerate(history):
-                        prompt += "[Round {}]\n问：{}\n答：{}\n".format(turn_idx, old_query, response)
-                    prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
-                inputs.append(prompt)
-                targets.append(examples[response_column][i])
-
-        model_inputs = tokenizer(inputs, max_length=data_args.max_source_length, truncation=True, padding=True)
-        labels = tokenizer(text_target=targets, max_length=data_args.max_target_length, truncation=True, padding=True)
-
-        if data_args.ignore_pad_token_for_loss:
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
-            ]
-        model_inputs["labels"] = labels["input_ids"]
-        return model_inputs
-
     def preprocess_function_train(examples):
         max_seq_length = data_args.max_source_length + data_args.max_target_length
 
@@ -615,7 +589,7 @@ def main():
             eval_dataset = eval_dataset.select(range(max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                preprocess_function_eval,
+                preprocess_function_train,
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 remove_columns=column_names,
@@ -632,7 +606,7 @@ def main():
             predict_dataset = predict_dataset.select(range(max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                preprocess_function_eval,
+                preprocess_function_train,
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 remove_columns=column_names,
