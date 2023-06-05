@@ -529,11 +529,18 @@ def main():
         if data_args.max_length is None:
             raise RuntimeError(f"只有当配置了参数 data_args.max_length 之后才会调用函数 split_source_and_target_length()")
 
-        source_len = int(data_args.max_length * (source_len / (source_len + target_len)))
-        target_len = int(data_args.max_length * (target_len / (source_len + target_len)))
-        source_len -= 2  # 防止加上特殊字符之后超长
-        target_len -= 2  # 防止加上特殊字符之后超长
-        return source_len, target_len
+        max_seq_length = data_args.max_length
+
+        new_source_len = int(max_seq_length * (source_len * 1.0 / (source_len + target_len)))
+        new_target_len = max_seq_length - new_source_len
+
+        # 如果有一方特别短，那么直接保留这部分的长度
+        if new_source_len <= 0:  
+            new_source_len, new_target_len = source_len, max_seq_length - source_len
+        if new_target_len <= 0:
+            new_source_len, new_target_len = max_seq_length - target_len, target_len
+
+        return new_source_len, new_target_len
 
     def preprocess_function_train(examples):
         if data_args.max_length is not None:
