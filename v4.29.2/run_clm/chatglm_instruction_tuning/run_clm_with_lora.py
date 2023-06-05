@@ -227,6 +227,14 @@ class DataTrainingArguments:
         default=None,
         metadata={"help": "The name of the column in the datasets containing the history of chat."},
     )
+    max_length: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": (
+                ""
+            )
+        },
+    )
     max_source_length: Optional[int] = field(
         default=1024,
         metadata={
@@ -517,8 +525,21 @@ def main():
     response_column = data_args.response_column
     history_column = data_args.history_column
 
+    def split_source_and_target_length(source_len, target_len):
+        if data_args.max_length is None:
+            raise RuntimeError(f"只有当配置了参数 data_args.max_length 之后才会调用函数 split_source_and_target_length()")
+
+        source_len = int(data_args.max_length * (source_len / (source_len + target_len)))
+        target_len = int(data_args.max_length * (target_len / (source_len + target_len)))
+        source_len -= 2  # 防止加上特殊字符之后超长
+        target_len -= 2  # 防止加上特殊字符之后超长
+        return source_len, target_len
+
     def preprocess_function_train(examples):
-        max_seq_length = data_args.max_source_length + data_args.max_target_length
+        if data_args.max_length is not None:
+            max_seq_length = data_args.max_length
+        else:
+            max_seq_length = data_args.max_source_length + data_args.max_target_length
 
         model_inputs = {
             "input_ids": [],
@@ -540,11 +561,17 @@ def main():
                 a_ids = tokenizer.encode(text=prompt, add_special_tokens=False)
                 b_ids = tokenizer.encode(text=answer, add_special_tokens=False)
 
-                if len(a_ids) > data_args.max_source_length - 1:
-                    a_ids = a_ids[: data_args.max_source_length - 1]
+                if data_args.max_length is not None:
+                    max_source_length, max_target_length = split_source_and_target_length(len(a_ids), len(b_ids))
+                else:
+                    max_source_length = data_args.max_source_length
+                    max_target_length = data_args.max_target_length
 
-                if len(b_ids) > data_args.max_target_length - 2:
-                    b_ids = b_ids[: data_args.max_target_length - 2]
+                if len(a_ids) > max_source_length - 1:
+                    a_ids = a_ids[: max_source_length - 1]
+
+                if len(b_ids) > max_target_length - 2:
+                    b_ids = b_ids[: max_target_length - 2]
 
                 input_ids = tokenizer.build_inputs_with_special_tokens(a_ids, b_ids)
 
