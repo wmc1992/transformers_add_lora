@@ -88,6 +88,7 @@ else:
 
         assert base_model_sd[original_key].dtype == torch.float16
 
+os.makedirs(output_dir, exist_ok=True)
 torch.save(base_model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
 print("Model Save Success:", os.path.join(output_dir, "pytorch_model.bin"))
 
