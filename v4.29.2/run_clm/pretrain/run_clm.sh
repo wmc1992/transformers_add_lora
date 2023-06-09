@@ -35,7 +35,8 @@ accelerate_config_file=../../accelerate_config_two_process.yaml
 #     run_clm_with_lora.py \
 
 # 使用 deepspeed 启动
-torchrun --nnodes 1 --nproc_per_node 6 run_clm_with_lora.py \
+torchrun --nnodes 1 --nproc_per_node 6 --master_port=39999 \
+    run_clm_with_lora.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${model_name_or_path} \
     --train_file ${train_file_path} \
