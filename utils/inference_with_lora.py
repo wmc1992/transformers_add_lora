@@ -37,10 +37,11 @@ else:  # 有多个lora模型
     assert len(multi_lora_models) % 2 == 0
 
     adapter_name_to_model_path = {}
-    for idx in range(len(multi_lora_models)):
+    for idx in range(0, len(multi_lora_models), 2):
         adapter_name_to_model_path[multi_lora_models[idx]] = multi_lora_models[idx + 1]
 
     for idx, (adapter_name, model_path) in enumerate(adapter_name_to_model_path.items()):
+        print("载入LoRA模型，adapter_name:", adapter_name, " model_path:", model_path)
         if idx == 0:
             model = PeftModel.from_pretrained(model, model_path, adapter_name=adapter_name)
         else:

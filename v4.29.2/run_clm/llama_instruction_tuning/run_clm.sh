@@ -1,32 +1,54 @@
 # 常规训练配置
-lr=1e-4
+lr=5e-5
 per_device_train_batch_size=8
 per_device_eval_batch_size=8
 gradient_accumulation_steps=4
 training_steps=3000
-max_seq_length=1024
 
 # LoRA 训练配置
 lora_rank=8
 lora_alpha=32
-target_modules="q_proj,v_proj,k_proj,o_proj,gate_proj,down_proj,up_proj"
+target_modules="q_proj,k_proj,v_proj,o_proj,gate_proj,down_proj,up_proj" # 需要根据不同的模型做修改
 lora_dropout=0.05
 
-# 数据与预训练模型的路径配置
+# 数据配置
+train_file_path=/the/train/dataset/file/path
+validation_file=/the/validation/dataset/file/path
+prompt_column="prompt"
+response_column="response"
+max_source_length=1024
+max_target_length=256
+
+# 预训练模型的路径配置
 model_name_or_path=/the/pretrained/model/name/or/path
-tokenizer_name=/the/tokenizer/name/or/path # 当使用 Chinese-LLaMA-Alpaca 时其扩充了词表，需要指定该值，其他模型一般不需要指定该值
-train_file_path=/the/dataset/file/path
 output_dir=/the/output/directory/to/save/model/and/state
 
 # deepspeed配置
-deepspeed_config_file=ds_zero2_no_offload.json
+deepspeed_config_file=../../ds_zero2_no_offload.json
 
-torchrun --nnodes 1 --nproc_per_node 2 run_clm_llama_with_lora.py \
+# accelerate配置
+accelerate_config_file=../../accelerate_config_two_process.yaml
+
+# 直接使用 python 启动
+# CUDA_VISIBLE_DEVICES=0 python3 run_clm_with_lora.py \
+
+# 使用 accelerate 启动
+# CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
+#     --config_file ${accelerate_config_file} \
+#     run_clm_with_lora.py \
+
+# 使用 deepspeed 启动
+torchrun --nnodes 1 --nproc_per_node 2 --master_port=39999 \
+    run_clm_with_lora.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${model_name_or_path} \
-    --tokenizer_name ${tokenizer_name} \
     --train_file ${train_file_path} \
+    --validation_file ${validation_file} \
     --validation_split_percentage 1 \
+    --prompt_column ${prompt_column} \
+    --response_column ${response_column} \
+    --max_source_length ${max_source_length} \
+    --max_target_length ${max_target_length} \
     --per_device_train_batch_size ${per_device_train_batch_size} \
     --per_device_eval_batch_size ${per_device_eval_batch_size} \
     --gradient_accumulation_steps ${gradient_accumulation_steps} \
@@ -47,7 +69,6 @@ torchrun --nnodes 1 --nproc_per_node 2 run_clm_llama_with_lora.py \
     --eval_steps 250 \
     --save_steps 500 \
     --preprocessing_num_workers 8 \
-    --block_size ${max_seq_length} \
     --output_dir ${output_dir} \
     --overwrite_output_dir \
     --ddp_timeout 30000 \
