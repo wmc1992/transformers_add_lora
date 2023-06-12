@@ -50,7 +50,7 @@ class DatasetUtil:
         self.prompt_type = prompt_type
 
     def tokenization(self, examples):
-        f = prompt_type_to_func.get(self.prompt_type, "default")
+        f = prompt_type_to_func[self.prompt_type]
         sources, targets = f(examples, self.prompt_column, self.response_column, self.history_column)
 
         tokenized_sources = self.tokenizer(

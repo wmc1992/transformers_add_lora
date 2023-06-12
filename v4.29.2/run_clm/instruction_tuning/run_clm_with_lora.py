@@ -216,7 +216,7 @@ class DataTrainingArguments:
     # 使用 LoRA 微调时新增的数据配置字段
     # --------------------------------------------------------------------------------
     prompt_type: Optional[str] = field(
-        default=None,
+        default="default",
         metadata={"help": f"The type of prompt to build input text, from list of {','.join(list(prompt_type_to_func.keys()))}"},
     )
     prompt_column: Optional[str] = field(
