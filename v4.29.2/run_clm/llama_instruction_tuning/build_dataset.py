@@ -53,33 +53,32 @@ class DatasetUtil:
         f = prompt_type_to_func[self.prompt_type]
         sources, targets = f(examples, self.prompt_column, self.response_column, self.history_column)
 
-        tokenized_sources = self.tokenizer(
-            sources,
-            max_length=self.max_source_length - 1,
-            padding="max_length",
-            truncation=True,
-            return_attention_mask=False,
-            return_token_type_ids=False,
-        )
-        tokenized_targets = self.tokenizer(
-            targets,
-            max_length=self.max_target_length - 1,
-            padding="max_length",
-            truncation=True,
-            return_attention_mask=False,
-            return_token_type_ids=False,
-        )
+        max_seq_len = self.max_source_length + self.max_target_length
 
         all_input_ids = []
         all_labels = []
-        for s,t in zip(tokenized_sources["input_ids"], tokenized_targets["input_ids"]):
-            input_ids = torch.LongTensor(s + t)
-            labels = torch.LongTensor([IGNORE_INDEX] * len(s) + t)
-            assert len(input_ids) == len(labels)
-            assert len(input_ids) <= self.max_source_length + self.max_target_length
+        for source, target in zip(sources, targets):
+            token_ids_0 = self.tokenizer.encode(text=source, add_special_tokens=False)
+            token_ids_1 = self.tokenizer.encode(text=target, add_special_tokens=False)
 
-            all_input_ids.append(input_ids)
-            all_labels.append(labels)
+            if len(token_ids_0) > self.max_source_length - 2:  # 这两个位置留给 bos_token 和 eos_token
+                token_ids_0 = token_ids_0[:self.max_source_length - 2]
+            if len(token_ids_1) > self.max_target_length - 2:  # 这两个位置留给 bos_token 和 eos_token
+                token_ids_1 = token_ids_1[:self.max_target_length - 2]
 
-        results = {"input_ids":all_input_ids, "labels": all_labels}
+            # TODO 这里在构造labels时，写死了其第一部分的长度为 len(token_ids_0)+2 ，这种方法不是很好
+            token_ids = self.tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
+            labels = [IGNORE_INDEX for _ in range(len(token_ids_0) + 2)] + token_ids[len(token_ids_0) + 2:]
+            assert len(token_ids) == len(labels)
+
+            # PADDING
+            if len(token_ids) < max_seq_len:
+                token_ids = token_ids + [self.tokenizer.pad_token_id for _ in range(max_seq_len - len(token_ids))]
+                labels = labels + [IGNORE_INDEX for _ in range(max_seq_len - len(token_ids))]
+            assert len(token_ids) == max_seq_len
+
+            all_input_ids.append(torch.LongTensor(token_ids))
+            all_labels.append(torch.LongTensor(labels))
+
+        results = {"input_ids": all_input_ids, "labels": all_labels}
         return results
