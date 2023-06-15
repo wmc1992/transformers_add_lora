@@ -16,8 +16,9 @@ train_file_path=/the/train/dataset/file/path
 validation_file=/the/validation/dataset/file/path
 prompt_column="prompt"
 response_column="response"
-max_source_length=1024
+max_source_length=1280
 max_target_length=256
+prompt_type=chat_prompt
 
 # 预训练模型的路径配置
 model_name_or_path=/the/pretrained/model/name/or/path
@@ -49,6 +50,7 @@ torchrun --nnodes 1 --nproc_per_node 2 --master_port=39999 \
     --response_column ${response_column} \
     --max_source_length ${max_source_length} \
     --max_target_length ${max_target_length} \
+    --prompt_type ${prompt_type} \
     --per_device_train_batch_size ${per_device_train_batch_size} \
     --per_device_eval_batch_size ${per_device_eval_batch_size} \
     --gradient_accumulation_steps ${gradient_accumulation_steps} \
