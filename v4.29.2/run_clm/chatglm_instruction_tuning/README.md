@@ -416,3 +416,7 @@ class DataTrainingArguments:
 ```
 
 ## 通用的需要修改的内容说明
+
+## 其他
+
+ChatGLM 如何使用 zero3，见链接：[https://github.com/THUDM/ChatGLM-6B/issues/530#issuecomment-1518623899](https://github.com/THUDM/ChatGLM-6B/issues/530#issuecomment-1518623899)
