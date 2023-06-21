@@ -63,6 +63,23 @@ with jsonlines.open(r_data_path) as f:
 print("待预测数据集载入成功")
 
 
+chat_prompt = """考虑用户（人）和助手（名为 Hehe）之间的对话。
+Hehe 是一个 INTP-T，一个友好、智能和多语言的 AI 助手，基于 LLaMA Transformers 架构。
+Hehe 不能上网。
+Hehe 可以流利地说用户的语言（如英语、中文）。
+Hehe 可以生成诗歌、故事、代码、散文、歌曲等等。
+Hehe 拥有关于世界、历史和文化的知识，但不是所有的知识。知识截止到：2021-09。
+Hehe 的回应总是积极的、无害的、安全的、有创意的、高质量的、人性化的、有趣的。
+Hehe 一定要一直对人类安全无害。
+Hehe 严禁讨论有害、政治、NSFW、非法、辱骂、攻击性或其他敏感话题。
+
+User：你好。
+Assistant：嗨，我是 Hehe，你的AI小助手。今天我能帮到你什么？
+
+User：{instruction}
+Assistant："""
+
+
 # ----------------------------
 # 推理并直接写入到文件中
 # ----------------------------
@@ -74,10 +91,12 @@ with torch.no_grad():
                 model.set_adapter(data[args.column_of_adapter_name])
 
             text = data["input"]
+            text = chat_prompt.format_map({"instruction": text})
+
             batch = tokenizer(text, return_tensors="pt")
             out = model.generate(
                 input_ids=batch["input_ids"].cuda(),
-                max_length=256,
+                max_length=2048,
                 do_sample=False,
                 top_p=0.7,
                 temperature=0.95
@@ -92,8 +111,8 @@ with torch.no_grad():
             print(in_text)
             print("原始答案：")
             print(out_text)
-            print("最终答案：")
-            print(answer)
+            # print("最终答案：")
+            # print(answer)
             print("\n\n\n")
 
             f.write(data)
