@@ -28,6 +28,7 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=True, 
     device_map="auto",
     torch_dtype=torch.float16,
+    # load_in_8bit=True,
 )
 tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 print("预训练模型载入成功")
@@ -105,15 +106,7 @@ with torch.no_grad():
             in_text = tokenizer.decode(batch["input_ids"][0])
             out_text = tokenizer.decode(out[0])
             answer = out_text.replace(in_text, "").replace("\nEND", "").strip()
+            if answer.endswith("</s>"):
+                answer = answer[:-len("</s>")]
             data["target"] = answer
-
-            print("原始问题：")
-            print(in_text)
-            print("原始答案：")
-            print(out_text)
-            # print("最终答案：")
-            # print(answer)
-            print("\n\n\n")
-
             f.write(data)
-            exit()
