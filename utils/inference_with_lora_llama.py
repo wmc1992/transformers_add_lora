@@ -97,7 +97,8 @@ with torch.no_grad():
             batch = tokenizer(text, return_tensors="pt")
             out = model.generate(
                 input_ids=batch["input_ids"].cuda(),
-                max_length=2048,
+                # max_length=2048,
+                max_new_tokens=1024,
                 do_sample=False,
                 top_p=0.7,
                 temperature=0.95
