@@ -534,9 +534,11 @@ def main():
 
     def preprocess_function_train(examples):
         if data_args.max_length is not None:
-            max_seq_length = data_args.max_length
-        else:
-            max_seq_length = data_args.max_source_length + data_args.max_target_length
+            max_source_length, max_target_length = split_source_and_target_length(len(a_ids), len(b_ids))
+            data_args.max_source_length = max_source_length
+            data_args.max_target_length = max_target_length
+
+        max_seq_length = data_args.max_source_length + data_args.max_target_length
 
         model_inputs = {
             "input_ids": [],
@@ -546,36 +548,18 @@ def main():
             if examples[prompt_column][i] and examples[response_column][i]:
                 query, answer = examples[prompt_column][i], examples[response_column][i]
 
-                a_ids = tokenizer.encode(text=query, add_special_tokens=False)
-                b_ids = tokenizer.encode(text=answer, add_special_tokens=False)
+                history = examples[history_column][i] if history_column is not None else None
+                prompt = tokenizer.build_prompt(query, history)
 
-                if data_args.max_length is not None:
-                    max_source_length, max_target_length = split_source_and_target_length(len(a_ids), len(b_ids))
-                else:
-                    max_source_length = data_args.max_source_length
-                    max_target_length = data_args.max_target_length
-
-                if len(a_ids) > max_source_length - 1:
-                    a_ids = a_ids[: max_source_length - 1]
-
-                if len(b_ids) > max_target_length - 2:
-                    b_ids = b_ids[: max_target_length - 2]
-
-                # ****************************************************************
-                # TODO 自己实现 tokenizer.build_inputs_with_special_tokens() 的逻辑
-                # ****************************************************************
-
-                prefix_tokens = tokenizer.get_prefix_tokens()
-                a_ids = prefix_tokens + a_ids
-                input_ids = a_ids + b_ids + [tokenizer.get_command("<eos>")]
-
-                # ****************************************************************
-                # TODO 自己实现 tokenizer.build_inputs_with_special_tokens() 的逻辑
-                # ****************************************************************
+                # prompt = prefix + prompt
+                a_ids = tokenizer.encode(text=prompt, add_special_tokens=True, truncation=True,
+                                         max_length=data_args.max_source_length)
+                b_ids = tokenizer.encode(text=answer, add_special_tokens=False, truncation=True,
+                                         max_length=data_args.max_target_length)
 
                 context_length = len(a_ids)
-                mask_position = context_length - 1
-                labels = [-100] * context_length + input_ids[mask_position+1:]
+                input_ids = a_ids + b_ids + [tokenizer.eos_token_id]
+                labels = [tokenizer.pad_token_id] * context_length + b_ids + [tokenizer.eos_token_id]
 
                 pad_len = max_seq_length - len(input_ids)
                 input_ids = input_ids + [tokenizer.pad_token_id] * pad_len
@@ -665,7 +649,7 @@ def main():
     # -----------------------------------------------------------------------
     if training_args.use_peft:
         model.gradient_checkpointing_enable()
-        # model.enable_input_require_grads()
+        model.enable_input_require_grads()
         model.config.use_cache = (False) # silence the warnings. Please re-enable for inference!
 
         if training_args.peft_path is not None:
