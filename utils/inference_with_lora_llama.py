@@ -4,7 +4,7 @@ from tqdm import tqdm
 import argparse
 
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import LlamaForCausalLM, LlamaTokenizer
 
 
 parser = argparse.ArgumentParser()
@@ -23,14 +23,14 @@ args = parser.parse_args()
 # 载入模型
 # ----------------------------
 model_path = args.base_model
-model = AutoModelForCausalLM.from_pretrained(
+model = LlamaForCausalLM.from_pretrained(
     model_path, 
     trust_remote_code=True, 
     device_map="auto",
     torch_dtype=torch.float16,
     # load_in_8bit=True,
 )
-tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+tokenizer = LlamaTokenizer.from_pretrained(model_path, trust_remote_code=True)
 print("预训练模型载入成功")
 
 if not args.multi_lora_model:  # 只有一个lora模型
