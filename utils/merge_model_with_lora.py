@@ -42,7 +42,7 @@ if base_model.get_input_embeddings().weight.size(0) != len(tokenizer):
 
 
 
-if hasattr(peft.LoraModel,"merge_and_unload") and config.model_type != "gpt2":
+if hasattr(peft.LoraModel, "merge_and_unload") and config.model_type != "gpt2":
     # 载入 lora model
     print(f"Start Load LoRA Model: {lora_model_path}")
     lora_model = PeftModel.from_pretrained(
