@@ -689,10 +689,10 @@ def main():
 
         model.print_trainable_parameters()
         logger.info(f"model.modules_to_save: {model.modules_to_save}")
-        old_state_dict = model.state_dict
-        model.state_dict = (
-            lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
-        ).__get__(model, type(model))
+        # old_state_dict = model.state_dict
+        # model.state_dict = (
+        #     lambda self, *_, **__: get_peft_model_state_dict(self, old_state_dict())
+        # ).__get__(model, type(model))
     # -----------------------------------------------------------------------
     # support for LoRA
     # -----------------------------------------------------------------------
