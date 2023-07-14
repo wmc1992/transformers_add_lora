@@ -58,6 +58,18 @@ def build_source_and_target_with_chat_prompt(examples, prompt_column, response_c
     return sources, targets
 
 
+ziya_prompt = """<human>:{instruction}\n<bot>:"""
+
+
+def build_source_and_target_with_ziya_prompt(examples, prompt_column, response_column, history_column):
+    sources = []
+    targets = []
+    for prompt, response in zip(examples[prompt_column], examples[response_column]):
+        sources.append(ziya_prompt.format_map({"instruction": prompt}))
+        targets.append(response)
+    return sources, targets
+
+
 def build_source_and_target_with_alpaca_prompt(examples, prompt_column, response_column, history_column):
     """ 该函数中使用的是出自 standard alpaca 的 prompt，不过由于该 prompt 是英文的，实际测试：该指令会可能导致模型输出部分英文 """
 
@@ -78,6 +90,7 @@ def build_source_and_target_with_alpaca_prompt(examples, prompt_column, response
 prompt_type_to_func = {
     "default": build_source_and_target_default,
     "chat_prompt": build_source_and_target_with_chat_prompt,
+    "ziya_prompt": build_source_and_target_with_ziya_prompt,
     "standard_alpaca": build_source_and_target_with_alpaca_prompt,
 }
 
